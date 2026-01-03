@@ -70,15 +70,15 @@ if 'session' in st.session_state:
             d2_tel = d2_lap.get_car_data().add_distance()
 
             # Plotting
-            fastf1.plotting.setup_mpl() # Setup F1 style plotting
+            fastf1.plotting.setup_mpl() 
             fig, ax = plt.subplots(figsize=(10, 5))
             
             # Plot Driver 1
-            d1_color = fastf1.plotting.driver_color(driver1)
+            d1_color = fastf1.plotting.get_driver_color(driver1, session=session)
             ax.plot(d1_tel['Distance'], d1_tel['Speed'], color=d1_color, label=driver1)
             
             # Plot Driver 2
-            d2_color = fastf1.plotting.driver_color(driver2)
+            d2_color = fastf1.plotting.get_driver_color(driver2, session=session)
             ax.plot(d2_tel['Distance'], d2_tel['Speed'], color=d2_color, label=driver2)
 
             ax.set_xlabel('Distance in Lap (m)')
@@ -214,7 +214,7 @@ if 'session' in st.session_state:
                 df_merged['GapToLeader'] = (df_merged['RaceTime_driver'] - df_merged['RaceTime_winner']).dt.total_seconds()
                 
                 # Plotting
-                d_color = fastf1.plotting.driver_color(driver)
+                d_color = fastf1.plotting.get_driver_color(driver, session=session)
                 ax.plot(df_merged['LapNumber'], df_merged['GapToLeader'], label=driver, color=d_color)
 
             # 3. Styling the Chart
