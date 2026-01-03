@@ -168,9 +168,85 @@ if 'session' in st.session_state:
                 st.warning("Not enough clean laps data for this compound to run a regression analysis.")
         
 
-    # --- FEATURE 3: RACE STRATEGY (Placeholder) ---
+    # --- FEATURE 3: RACE STRATEGY  ---
     with tab3:
-        st.info("Pit stop traffic analysis will go here.")
+        st.header("The Undercut Detector (Gap to Leader)")
+        st.markdown("Analyze pit windows and traffic. A sharp rise in the line indicates a pit stop.")
+
+        # 1. Helper: Calculate Gap to Leader
+        # We need to calculate the cumulative race time for every driver
+        # and compare it to the winner's cumulative time.
+        
+        # Get the race winner
+        winner_name = session.results.iloc[0]['Abbreviation']
+        winner_laps = session.laps.pick_driver(winner_name)
+        
+        # Calculate the winner's cumulative time per lap
+        # We use reset_index to ensure LapNumber matches the index for merging
+        winner_laps['RaceTime'] = winner_laps['LapTime'].cumsum()
+        winner_trace = winner_laps[['LapNumber', 'RaceTime']].set_index('LapNumber')
+
+        # 2. User Selection: Who to track?
+        # Default to Top 5 drivers + the user's selected driver from Tab 1
+        top_5 = session.results['Abbreviation'].iloc[:5].tolist()
+        selected_drivers = st.multiselect("Select Drivers to Trace", 
+                                          options=sorted(session.results['Abbreviation'].unique()),
+                                          default=top_5)
+
+        if st.button("Generate Race Trace"):
+            fig, ax = plt.subplots(figsize=(12, 6))
+            
+            # Loop through selected drivers and plot their gap
+            for driver in selected_drivers:
+                driver_laps = session.laps.pick_driver(driver)
+                
+                # Calculate Driver's Race Time
+                driver_laps['RaceTime'] = driver_laps['LapTime'].cumsum()
+                
+                # Merge with Winner's Time on LapNumber to calculate the gap
+                # We do this to align laps correctly (Lap 1 vs Lap 1)
+                df_merged = pd.merge(driver_laps[['LapNumber', 'RaceTime']], 
+                                     winner_trace, 
+                                     on='LapNumber', 
+                                     suffixes=('_driver', '_winner'))
+                
+                # Calculate Gap (Driver Time - Winner Time)
+                df_merged['GapToLeader'] = (df_merged['RaceTime_driver'] - df_merged['RaceTime_winner']).dt.total_seconds()
+                
+                # Plotting
+                d_color = fastf1.plotting.driver_color(driver)
+                ax.plot(df_merged['LapNumber'], df_merged['GapToLeader'], label=driver, color=d_color)
+
+            # 3. Styling the Chart
+            ax.set_ylabel("Gap to Leader (seconds)")
+            ax.set_xlabel("Lap Number")
+            ax.set_title(f"Race Trace: Gap to {winner_name}")
+            
+            # Invert Y-axis? 
+            # Usually gaps are positive (0 is leader). 
+            # If we invert, the leader is at the top. Let's keep it standard (0 at bottom).
+            ax.invert_yaxis() # Actually, inverting makes it intuitive: Leader is at the "top", slower cars "fall down"
+            
+            ax.legend()
+            
+            # Dark Mode Styling
+            ax.set_facecolor('black')
+            fig.patch.set_facecolor('black')
+            ax.tick_params(colors='white')
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.title.set_color('white')
+            ax.grid(color='gray', linestyle='--', linewidth=0.5, alpha=0.5)
+
+            st.pyplot(fig)
+            
+            st.info("""
+            **How to read this chart:**
+            - **The Baseline (Top):** The horizontal line at 0 is the Race Leader.
+            - **Sloping Down:** The driver is losing time to the leader.
+            - **Vertical Drop:** This is a **Pit Stop**. The size of the drop is the time lost in the pits (~20-25s).
+            - **Traffic:** If a driver pits (drops) and their line lands *below* another driver's line, they have exited into traffic.
+            """)
 
 else:
     st.info("👈 Please select a race and click 'Load Session Data' to begin.")
