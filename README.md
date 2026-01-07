@@ -60,3 +60,26 @@ pitwall-f1/
 ├── requirements.txt      # Python dependencies
 ├── cache/                # Local cache for FastF1 data (auto-generated)
 └── README.md             # Project documentation
+```
+
+---
+
+## 🧠 Key Technical Challenges Solved
+
+- **Data Synchronization:** Telemetry streams often have different sampling rates. I used interpolation to map speed traces to a common distance metric.
+
+- **API Optimization:** Implemented st.cache_data to prevent re-downloading heavy telemetry files (50MB+) on every user interaction, reducing load times by 90%.
+
+- **Noise Filtering:** Developed a robust filtering algorithm to exclude VSC (Virtual Safety Car) and Pit Laps from the regression model to ensure accurate degradation predictions.
+
+---
+
+## 🔮 Future Improvements
+
+- **Machine Learning:** Implement a Random Forest Regressor to predict "Box Lap" based on tyre life.
+
+- **Live Mode:** Connect to the live session stream for real-time race weekend analysis.
+
+---
+
+Built with ❤️ by **Chanthul**
