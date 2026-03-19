@@ -9,7 +9,6 @@ st.set_page_config(page_title="PitWall | F1 Strategy Predictor", layout="wide")
 st.title("🏎️ PitWall: F1 Race Strategy Predictor")
 
 # 2. Setup FastF1 Caching (CRITICAL for performance)
-# This creates a folder to store data so we don't spam the F1 API
 cache_dir = 'cache'
 fastf1.Cache.enable_cache(cache_dir) 
 
@@ -92,10 +91,8 @@ if 'session' in st.session_state:
         st.markdown("Use Machine Learning to calculate how much pace a driver loses per lap due to tyre wear.")
 
         # 1. Select Driver and Compound
-        # We get a list of drivers and the compounds they used
         col1, col2 = st.columns(2)
         with col1:
-            # Re-using the list of drivers from the session
             driver_deg = st.selectbox("Select Driver", sorted(session.results['Abbreviation'].unique()), key="deg_driver")
         
         # Get all laps for this driver
@@ -110,13 +107,10 @@ if 'session' in st.session_state:
             from sklearn.linear_model import LinearRegression
             import numpy as np
 
-            # 2. Data Pre-processing (The Crucial Step)
-            # Filter for the specific compound
+            # 2. Data Pre-processing 
             stint_laps = driver_laps.pick_tyre(compound)
             
-            # Filter out "Slow" laps (In-laps, Out-laps, Safety Car)
-            # We reject any lap that is "quick" (IsAccurate=True) to ensure data quality
-            stint_laps = stint_laps.pick_quicklaps().pick_track_status('1') # '1' means clear track (green flag)
+            stint_laps = stint_laps.pick_quicklaps().pick_track_status('1') 
             
             if len(stint_laps) > 5: # Need at least a few laps to make a prediction
                 
@@ -173,21 +167,17 @@ if 'session' in st.session_state:
         st.header("The Undercut Detector (Gap to Leader)")
         st.markdown("Analyze pit windows and traffic. A sharp rise in the line indicates a pit stop.")
 
-        # 1. Helper: Calculate Gap to Leader
-        # We need to calculate the cumulative race time for every driver
-        # and compare it to the winner's cumulative time.
+        # Calculate Gap to Leader
         
         # Get the race winner
         winner_name = session.results.iloc[0]['Abbreviation']
         winner_laps = session.laps.pick_driver(winner_name)
         
         # Calculate the winner's cumulative time per lap
-        # We use reset_index to ensure LapNumber matches the index for merging
         winner_laps['RaceTime'] = winner_laps['LapTime'].cumsum()
         winner_trace = winner_laps[['LapNumber', 'RaceTime']].set_index('LapNumber')
 
-        # 2. User Selection: Who to track?
-        # Default to Top 5 drivers + the user's selected driver from Tab 1
+        # 2. User Selection:
         top_5 = session.results['Abbreviation'].iloc[:5].tolist()
         selected_drivers = st.multiselect("Select Drivers to Trace", 
                                           options=sorted(session.results['Abbreviation'].unique()),
@@ -196,7 +186,6 @@ if 'session' in st.session_state:
         if st.button("Generate Race Trace"):
             fig, ax = plt.subplots(figsize=(12, 6))
             
-            # Loop through selected drivers and plot their gap
             for driver in selected_drivers:
                 driver_laps = session.laps.pick_driver(driver)
                 
@@ -204,7 +193,6 @@ if 'session' in st.session_state:
                 driver_laps['RaceTime'] = driver_laps['LapTime'].cumsum()
                 
                 # Merge with Winner's Time on LapNumber to calculate the gap
-                # We do this to align laps correctly (Lap 1 vs Lap 1)
                 df_merged = pd.merge(driver_laps[['LapNumber', 'RaceTime']], 
                                      winner_trace, 
                                      on='LapNumber', 
@@ -223,10 +211,7 @@ if 'session' in st.session_state:
             ax.set_title(f"Race Trace: Gap to {winner_name}")
             
             # Invert Y-axis? 
-            # Usually gaps are positive (0 is leader). 
-            # If we invert, the leader is at the top. Let's keep it standard (0 at bottom).
-            ax.invert_yaxis() # Actually, inverting makes it intuitive: Leader is at the "top", slower cars "fall down"
-            
+            ax.invert_yaxis() 
             ax.legend()
             
             # Dark Mode Styling
