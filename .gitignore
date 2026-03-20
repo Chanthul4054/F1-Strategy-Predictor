@@ -1,2 +1,13 @@
-cache
-.vscode
+cache/
+.vscode/
+
+# Python compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data Pipeline
+data/
+*.parquet
+*.db
+*.sqlite3
