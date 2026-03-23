@@ -31,6 +31,26 @@
 
 ---
 
+## ⚙️ How It Works (Application Architecture)
+
+The application is split into two decoupled halves: **1) The Data Engineering ETL Pipeline** (Back-end) and **2) The Analytical Dashboard** (Front-end).
+
+### Part 1: The ETL Data Pipeline (`data_pipeline/`)
+This acts as your "Data Factory." Its entire job is to reliably pull messy data from the real world, clean it, engineer new metrics out of it, and organize it into a structured warehouse so the frontend can query it easily.
+
+1. **Extraction (`ingest.py`)**: Connects to the official F1 API (via FastF1) using command-line parameters (Year, Grand Prix, Session). It extracts granular sets of lap times, track status, and compounds, immediately saving them as fast, columnar `.parquet` files in the **Data Lake** (`data/raw/`).
+2. **Transformation (`transform.py`)**: The refinery script. It drops duplicates, logs Data Quality checks, handles missing out-lap times, and creates smart, calculated metrics (`TyreAge`, `LapDeltaToStintMean`, `DegradationTrend`, `IsPitLap`). It also rolls up thousands of laps into bite-sized "Stint Summaries" (`stint_summary_...`).
+3. **Loading (`load.py`)**: Pushes the cleaned and modeled data into the final destination—a local **SQLite Database Data Warehouse** (`f1_data.db`). It creates structured relational tables (`f1_laps`, `f1_race_results`, `f1_stint_summaries`) ready for fast BI querying.
+
+### Part 2: The Streamlit Dashboard (`f1App.py`)
+This is the front-facing "Pit Wall" application that race engineers would theoretically look at. It utilizes Streamlit's caching to load massive amounts of data efficiently and hosts four main analytical tabs:
+- **Telemetry Duel:** Aligns telemetry by track distance (not time) to accurately compare braking points and cornering speeds between two drivers.
+- **Tyre Degradation:** Uses a Scikit-Learn Linear Regression model on "clean laps" to calculate the exact pace lost per lap per compound.
+- **Undercut Detector:** Charts the "Gap to Leader" across the entire race. Pit stops appear as massive vertical drops, visually revealing undercut successes against traffic.
+- **Pit Strategy Predictor:** Analyzes every stint in the race and dynamically trains a Random Forest Classifier. It evaluates a driver's live *Tyre Age* and outputs a percentage probability that the driver is in their optimal pit window to box.
+
+---
+
 ## 🛠️ Tech Stack
 
 * **Data Source:** [FastF1](https://github.com/theOehrly/Fast-F1) (Official F1 Live Timing API wrapper)
