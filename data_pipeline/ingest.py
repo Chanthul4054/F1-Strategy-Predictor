@@ -2,7 +2,7 @@ import fastf1
 import pandas as pd
 import os
 import logging
-from config import RAW_DATA_DIR, YEAR, GRAND_PRIX, SESSION
+from config import RAW_DATA_DIR
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -52,4 +52,11 @@ def fetch_and_save_raw_data(year, gp, session_type):
     return laps_path, results_path
 
 if __name__ == "__main__":
-    fetch_and_save_raw_data(YEAR, GRAND_PRIX, SESSION)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--year", type=int, default=2024)
+    parser.add_argument("--gp", type=str, default="Bahrain")
+    parser.add_argument("--session", type=str, default="R")
+    args = parser.parse_args()
+    
+    fetch_and_save_raw_data(args.year, args.gp, args.session)

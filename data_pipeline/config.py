@@ -11,7 +11,5 @@ DB_PATH = os.path.join(DB_DIR, 'f1_data.db')
 for d in [RAW_DATA_DIR, PROCESSED_DATA_DIR, DB_DIR]:
     os.makedirs(d, exist_ok=True)
 
-# Centralized arguments for pipeline execution
-YEAR = 2024
-GRAND_PRIX = "Bahrain"
-SESSION = "R"
+
+

@@ -2,7 +2,7 @@ import pandas as pd
 import sqlite3
 import os
 import logging
-from config import PROCESSED_DATA_DIR, DB_PATH, YEAR, GRAND_PRIX, SESSION
+from config import PROCESSED_DATA_DIR, DB_PATH
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -41,7 +41,14 @@ def load_data_to_db(proc_laps_path, proc_results_path, proc_stints_path):
         conn.close()
 
 if __name__ == "__main__":
-    base_name = f"{YEAR}_{GRAND_PRIX.replace(' ', '_')}_{SESSION}"
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--year", type=int, default=2024)
+    parser.add_argument("--gp", type=str, default="Bahrain")
+    parser.add_argument("--session", type=str, default="R")
+    args = parser.parse_args()
+    
+    base_name = f"{args.year}_{args.gp.replace(' ', '_')}_{args.session}"
     lp = os.path.join(PROCESSED_DATA_DIR, f"clean_laps_{base_name}.parquet")
     rp = os.path.join(PROCESSED_DATA_DIR, f"clean_results_{base_name}.parquet")
     sp = os.path.join(PROCESSED_DATA_DIR, f"stint_summary_{base_name}.parquet")

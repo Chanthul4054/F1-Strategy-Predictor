@@ -45,7 +45,7 @@ if 'session' in st.session_state:
     session = st.session_state['session']
     
     # Create Tabs for different features
-    tab1, tab2, tab3 = st.tabs(["⚡ Telemetry Duel", "🛞 Tyre Analysis", "🏁 Race Strategy"])
+    tab1, tab2, tab3, tab4 = st.tabs(["⚡ Telemetry Duel", "🛞 Tyre Analysis", "🏁 Race Strategy", "🤖 Pit Strategy Predictor"])
 
     # --- FEATURE 1: TELEMETRY DUEL ---
     with tab1:
@@ -232,6 +232,90 @@ if 'session' in st.session_state:
             - **Vertical Drop:** This is a **Pit Stop**. The size of the drop is the time lost in the pits (~20-25s).
             - **Traffic:** If a driver pits (drops) and their line lands *below* another driver's line, they have exited into traffic.
             """)
+
+    # --- FEATURE 4: PIT STRATEGY PREDICTOR ---
+    with tab4:
+        st.header("Pit Strategy Predictor")
+        st.markdown("Predicts if a driver is entering their pit window based on their current tyre age using a RandomForestClassifier trained on session stint data.")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            driver_pred = st.selectbox("Select Driver to Predict", sorted(session.results['Abbreviation'].unique()), key="pred_driver")
+        
+        # Prepare dataset of all stints for all drivers
+        stints_data = []
+        for d in session.results['Abbreviation'].unique():
+            dlaps = session.laps.pick_driver(d)
+            for stint, st_laps in dlaps.groupby('Stint'):
+                if not st_laps.empty and pd.notna(st_laps['Compound'].iloc[0]):
+                    max_laps = st_laps['LapNumber'].max()
+                    compound = st_laps['Compound'].iloc[0]
+                    stints_data.append({'Compound': compound, 'MaxTyreLife': len(st_laps)})
+        
+        if len(stints_data) > 0 and st.button("Predict Pit Window"):
+            from sklearn.ensemble import RandomForestClassifier
+            import numpy as np
+            
+            df_stints = pd.DataFrame(stints_data).dropna()
+            
+            # Synthetic dataset logic:
+            # Generate laps 1 to MaxTyreLife. Pit window opens ~2 laps before the maximum life.
+            train_data = []
+            for _, row in df_stints.iterrows():
+                comp = str(row['Compound'])
+                max_life = row['MaxTyreLife']
+                for lap in range(1, int(max_life) + 2):
+                    is_pit_window = 1 if lap >= max_life - 2 else 0
+                    train_data.append({'Compound': comp, 'TyreAge': lap, 'PitWindowOpen': is_pit_window})
+            
+            train_df = pd.DataFrame(train_data)
+            
+            # Feature Encoding
+            train_df = pd.get_dummies(train_df, columns=['Compound'])
+            X = train_df.drop('PitWindowOpen', axis=1)
+            y = train_df['PitWindowOpen']
+            
+            # Train model
+            rf_model = RandomForestClassifier(n_estimators=50, random_state=42)
+            rf_model.fit(X, y)
+            
+            # Get Current data for driver
+            current_laps = session.laps.pick_driver(driver_pred)
+            if not current_laps.empty:
+                last_lap = current_laps.iloc[-1]
+                current_stint = last_lap['Stint']
+                current_compound = str(last_lap['Compound'])
+                current_tyre_age = len(current_laps[current_laps['Stint'] == current_stint])
+                
+                # Inference row
+                inf_row = {'TyreAge': current_tyre_age}
+                for c in X.columns:
+                    if c.startswith('Compound_'):
+                        inf_row[c] = 1 if c == f"Compound_{current_compound}" else 0
+                
+                inf_df = pd.DataFrame([inf_row])
+                for c in X.columns: # Ensure exact same columns
+                    if c not in inf_df.columns:
+                        inf_df[c] = 0
+                inf_df = inf_df[X.columns]
+                
+                prob = rf_model.predict_proba(inf_df)[0][1] * 100
+                st.subheader(f"Strategy Prediction for {driver_pred}")
+                
+                col3, col4, col5 = st.columns(3)
+                col3.metric(label="Probability of Pit Window", value=f"{prob:.1f}%")
+                col4.metric(label="Current Compound", value=current_compound)
+                col5.metric(label="Tyre Age", value=f"{current_tyre_age} laps")
+                
+                if prob > 70:
+                    st.error(f"🚨 High probability! Pit window is OPEN for {driver_pred}. Recommended to box soon.")
+                elif prob > 40:
+                    st.warning(f"⚠️ Nearing pit window. Degradation is likely becoming an issue.")
+                else:
+                    st.success(f"✅ Tyre life is good. Keep pushing.")
+
+            else:
+                st.warning("No lap data available for this driver yet.")
 
 else:
     st.info("👈 Please select a race and click 'Load Session Data' to begin.")
