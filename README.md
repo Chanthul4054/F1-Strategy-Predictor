@@ -5,9 +5,9 @@
 ## 🚀 Features
 
 ### 1. ⚙️ End-to-End Data Pipeline (ETL)
-* **Ingestion (Data Lake - Raw):** Extracts live FastF1 data and serializes it to columnar Parquet format for high-speed storage.
-* **Transformation:** Cleanses missing lap times, drops duplicated records, engineers features (Clean Lap Flags), and calculates mathematical aggregations (Stint summaries) using Pandas.
-* **Loading (Data Warehouse):** Structures the processed Parquet files into a relational SQLite Database (OLAP) using a Star/Snowflake schema suitable for BI consumption.
+* **Ingestion (Data Lake - Raw):** Extracts live FastF1 data and serializes it to columnar Parquet format for high-speed storage. Output: `laps_YYYY_GP_Session.parquet` and `results_YYYY_GP_Session.parquet`.
+* **Transformation:** Cleanses missing lap times, drops duplicated records, engineers features (Tyre Age, Clean Lap Flags, Pit Indicators, Degradation Trends, Lap Delta), performs data quality logging, and calculates aggregations (Stint summaries) using Pandas. Output: `clean_laps_...`, `clean_results_...`, `stint_summary_...`.
+* **Loading (Data Warehouse):** Structures the processed Parquet files into a relational SQLite Database (OLAP) using a Star/Snowflake schema suitable for BI consumption. Output: `f1_data.db` (tables: `f1_laps`, `f1_race_results`, `f1_stint_summaries`).
 
 ### 2. ⚡ Telemetry Duel
 * **The Problem:** Comparing driver speeds is difficult because tracks have different lengths and corner profiles.
@@ -23,6 +23,11 @@
 * **The Problem:** TV broadcasts rarely show the "Gap to Leader" effectively during pit windows.
 * **The Solution:** Visualizes the entire race trace, highlighting vertical drops (Pit Stops) and relative track position.
 * **Insight:** "Did the undercut strategy work? See where the driver exited relative to traffic."
+
+### 5. 🤖 Pit Strategy Predictor
+* **The Problem:** Knowing exactly when to pit based on tire degradation and pace.
+* **The Solution:** Uses a Random Forest Classifier trained on stint lengths to estimate the probability that a driver's pit window is open.
+* **Insight:** "Is it time to box? Check if the driver is within their optimal pit window."
 
 ---
 
@@ -41,8 +46,8 @@
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/pitwall-f1.git
-    cd pitwall-f1
+    git clone https://github.com/Chanthul4054/F1-Strategy-Predictor.git
+    cd F1-Strategy-Predictor
     ```
 
 2.  **Install dependencies**
@@ -51,10 +56,10 @@
     ```
 
 3.  **Run the Data Pipeline (ETL)**
-    This will extract the latest data, transform it, and build the `f1_data.db` database.
+    This will extract the latest data, transform it, and build the `f1_data.db` database. You can pass the year, GP, and session as arguments.
     ```bash
     cd data_pipeline
-    python pipeline.py
+    python pipeline.py --year 2024 --gp Bahrain --session R
     cd ..
     ```
 
