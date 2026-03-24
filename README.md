@@ -114,6 +114,80 @@ pitwall-f1/
 
 ---
 
+## 📊 ETL Pipeline Design Diagram
+
+```mermaid
+flowchart TD
+    subgraph Data Sources
+        API[FastF1 API / Ergast]
+    end
+
+    subgraph Phase 1: Ingest (ingest.py)
+        A[fetch_and_save_raw_data]
+        C[FastF1 Local Cache]
+    end
+
+    subgraph Raw Data Zone
+        R1[(laps_*.parquet)]
+        R2[(results_*.parquet)]
+    end
+
+    subgraph Phase 2: Transform (transform.py)
+        T[clean_and_transform_data]
+        
+        subgraph Operations
+            O1(Data Cleaning & Deduplication)
+            O2(Feature Engineering)
+            O3(Stint Summarization)
+        end
+    end
+
+    subgraph Processed Data Zone
+        P1[(clean_laps_*.parquet)]
+        P2[(clean_results_*.parquet)]
+        P3[(stint_summary_*.parquet)]
+    end
+
+    subgraph Phase 3: Load (load.py)
+        L[load_data_to_db]
+    end
+
+    subgraph Database Storage
+        DB[(f1_strategy.db\nSQLite Database)]
+        TB1[Table: f1_laps]
+        TB2[Table: f1_race_results]
+        TB3[Table: f1_stint_summaries]
+    end
+
+    %% Flow Connections
+    API -->|Fetch Session| A
+    C -.->|Cache| A
+    A -->|Save| R1
+    A -->|Save| R2
+    
+    R1 -->|Read| T
+    R2 -->|Read| T
+    
+    T --> O1
+    O1 --> O2
+    O2 --> O3
+    
+    O3 -->|Save| P1
+    O3 -->|Save| P2
+    O3 -->|Save| P3
+
+    P1 -->|Read| L
+    P2 -->|Read| L
+    P3 -->|Read| L
+
+    L -->|Write| DB
+    DB --> TB1
+    DB --> TB2
+    DB --> TB3
+```
+
+---
+
 ## 🗄️ Database Design (Warehouse)
 
 The SQLite Database uses an analytical schema to support the Streamlit Dashboard:
