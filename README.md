@@ -118,69 +118,68 @@ pitwall-f1/
 
 ```mermaid
 flowchart TD
-    subgraph Data Sources
-        API[FastF1 API / Ergast]
+    subgraph DS["Data Sources"]
+        API["FastF1 API / Ergast"]
     end
 
-    subgraph Phase 1: Ingest (ingest.py)
-        A[fetch_and_save_raw_data]
-        C[FastF1 Local Cache]
+    subgraph P1["Phase 1: Ingest (ingest.py)"]
+        A["fetch_and_save_raw_data"]
+        C["FastF1 Local Cache"]
     end
 
-    subgraph Raw Data Zone
-        R1[(laps_*.parquet)]
-        R2[(results_*.parquet)]
+    subgraph RDZ["Raw Data Zone"]
+        R1[("laps_*.parquet")]
+        R2[("results_*.parquet")]
     end
 
-    subgraph Phase 2: Transform (transform.py)
-        T[clean_and_transform_data]
-        
-        subgraph Operations
-            O1(Data Cleaning & Deduplication)
-            O2(Feature Engineering)
-            O3(Stint Summarization)
+    subgraph P2["Phase 2: Transform (transform.py)"]
+        T["clean_and_transform_data"]
+
+        subgraph OPS["Operations"]
+            O1["Data Cleaning & Deduplication"]
+            O2["Feature Engineering"]
+            O3["Stint Summarization"]
         end
     end
 
-    subgraph Processed Data Zone
-        P1[(clean_laps_*.parquet)]
-        P2[(clean_results_*.parquet)]
-        P3[(stint_summary_*.parquet)]
+    subgraph PDZ["Processed Data Zone"]
+        P1A[("clean_laps_*.parquet")]
+        P2A[("clean_results_*.parquet")]
+        P3A[("stint_summary_*.parquet")]
     end
 
-    subgraph Phase 3: Load (load.py)
-        L[load_data_to_db]
+    subgraph P3L["Phase 3: Load (load.py)"]
+        L["load_data_to_db"]
     end
 
-    subgraph Database Storage
-        DB[(f1_strategy.db\nSQLite Database)]
-        TB1[Table: f1_laps]
-        TB2[Table: f1_race_results]
-        TB3[Table: f1_stint_summaries]
+    subgraph DBS["Database Storage"]
+        DB[("f1_strategy.db<br/>SQLite Database")]
+        TB1["Table: f1_laps"]
+        TB2["Table: f1_race_results"]
+        TB3["Table: f1_stint_summaries"]
     end
 
-    %% Flow Connections
-    API -->|Fetch Session| A
-    C -.->|Cache| A
-    A -->|Save| R1
-    A -->|Save| R2
-    
-    R1 -->|Read| T
-    R2 -->|Read| T
-    
+    API -->|"Fetch Session"| A
+    C -.->|"Cache"| A
+    A -->|"Save"| R1
+    A -->|"Save"| R2
+
+    R1 -->|"Read"| T
+    R2 -->|"Read"| T
+
     T --> O1
     O1 --> O2
     O2 --> O3
-    
-    O3 -->|Save| P1
-    O3 -->|Save| P2
-    O3 -->|Save| P3
 
-    P1 -->|Read| L
-    P2 -->|Read| L
-    P3 -->|Read| L
+    O3 -->|"Save"| P1A
+    O3 -->|"Save"| P2A
+    O3 -->|"Save"| P3A
 
-    L -->|Write| DB
+    P1A -->|"Read"| L
+    P2A -->|"Read"| L
+    P3A -->|"Read"| L
+
+    L -->|"Write"| DB
     DB --> TB1
     DB --> TB2
     DB --> TB3
