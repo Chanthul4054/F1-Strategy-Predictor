@@ -1,6 +1,6 @@
 import logging
 import argparse
-from ingest import fetch_and_save_raw_data
+from extract import fetch_and_save_raw_data
 from transform import clean_and_transform_data
 from load import load_data_to_db
 

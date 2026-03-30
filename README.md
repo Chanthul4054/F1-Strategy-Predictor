@@ -38,7 +38,7 @@ The application is split into two decoupled halves: **1) The Data Engineering ET
 ### Part 1: The ETL Data Pipeline (`data_pipeline/`)
 This acts as your "Data Factory." Its entire job is to reliably pull messy data from the real world, clean it, engineer new metrics out of it, and organize it into a structured warehouse so the frontend can query it easily.
 
-1. **Extraction (`ingest.py`)**: Connects to the official F1 API (via FastF1) using command-line parameters (Year, Grand Prix, Session). It extracts granular sets of lap times, track status, and compounds, immediately saving them as fast, columnar `.parquet` files in the **Data Lake** (`data/raw/`).
+1. **Extraction (`extract.py`)**: Connects to the official F1 API (via FastF1) using command-line parameters (Year, Grand Prix, Session). It extracts granular sets of lap times, track status, and compounds, immediately saving them as fast, columnar `.parquet` files in the **Data Lake** (`data/raw/`).
 2. **Transformation (`transform.py`)**: The refinery script. It drops duplicates, logs Data Quality checks, handles missing out-lap times, and creates smart, calculated metrics (`TyreAge`, `LapDeltaToStintMean`, `DegradationTrend`, `IsPitLap`). It also rolls up thousands of laps into bite-sized "Stint Summaries" (`stint_summary_...`).
 3. **Loading (`load.py`)**: Pushes the cleaned and modeled data into the final destination—a local **SQLite Database Data Warehouse** (`f1_data.db`). It creates structured relational tables (`f1_laps`, `f1_race_results`, `f1_stint_summaries`) ready for fast BI querying.
 
@@ -79,7 +79,7 @@ This is the front-facing "Pit Wall" application that race engineers would theore
     This will extract the latest data, transform it, and build the `f1_data.db` database. You can pass the year, GP, and session as arguments.
     ```bash
     cd data_pipeline
-    python pipeline.py --year 2024 --gp Bahrain --session R
+    python run_pipeline.py --year 2024 --gp Bahrain --session R
     cd ..
     ```
 
@@ -96,10 +96,10 @@ This is the front-facing "Pit Wall" application that race engineers would theore
 pitwall-f1/
 ├── data_pipeline/                # ⚙️ The ETL Pipeline Module
 │   ├── config.py                 # Central configuration for paths and variables
-│   ├── ingest.py                 # Phase 1: Extractions from FastF1 API to Parquet Data Lake
+│   ├── extract.py                # Phase 1: Extractions from FastF1 API to Parquet Data Lake
 │   ├── transform.py              # Phase 2: Data Cleaning, Missing Values, and Aggregations
 │   ├── load.py                   # Phase 3: Loads processed Parquet records into SQLite
-│   └── pipeline.py               # The Orchestrator execution script
+│   └── run_pipeline.py           # The Orchestrator execution script
 │
 ├── data/                         # 🗄️ Data Storage Ecosystem
 │   ├── raw/                      # Data Lake Zone 1 (Raw Parquet files from API)
@@ -122,7 +122,7 @@ flowchart TD
         API["FastF1 API / Ergast"]
     end
 
-    subgraph P1["Phase 1: Ingest (ingest.py)"]
+    subgraph P1["Phase 1: Ingest (extract.py)"]
         A["fetch_and_save_raw_data"]
         C["FastF1 Local Cache"]
     end
@@ -206,7 +206,7 @@ The SQLite Database uses an analytical schema to support the Streamlit Dashboard
 
 ## 🔮 Future Improvements
 
-- **Orchestration Tooling:** Migrate `pipeline.py` to Apache Airflow or Dagster for CRON scheduling on race weekends.
+- **Orchestration Tooling:** Migrate `run_pipeline.py` to Apache Airflow or Dagster for CRON scheduling on race weekends.
 - **Machine Learning:** Implement a Random Forest Regressor to predict "Box Lap" based on tyre life using the processed database features.
 - **Live Mode:** Connect the pipeline to stream live telemetry updates via Kafka.
 
